@@ -20,7 +20,7 @@ function setup() {
 	noCursor();
 
 	//framerate changes speed (flawed)
-	frameRate(30);
+	frameRate(60);
 
 	//Create new Snake
 	snake = new Snake();
@@ -62,7 +62,7 @@ function Snake() {
 	this.y = 0;
 	this.xspeed = 0;
 	this.yspeed = 0;
-	this.snakeLength = 1;
+	this.snakeLength = 0;
 	this.body = [];
 
 	//Creates snake, only called on start
@@ -104,10 +104,8 @@ function Snake() {
 	this.update = function() {
 		//update directions
 		this.dir();
-		print(this.xspeed + ", " + this.yspeed + "\n");
 		updates = [];
 		//change location of vectors
-		print("snakelength: " + this.snakeLength + ", " + this.body.length + "\n");
 		if (this.snakeLength === this.body.length) {
 			for(var i = 0; i < this.body.length - 1; i++) {
 				this.body[i] = this.body[i+1];
@@ -115,34 +113,35 @@ function Snake() {
 			}
 		}
 
-		this.x = this.x + this.xspeed*scl;
-		this.y = this.y + this.yspeed*scl;
+		//Create a vector for the head
+		if (this.snakeLength > 0){
+			this.x = this.x + this.xspeed*scl;
+			this.y = this.y + this.yspeed*scl;
 
-		this.x = constrain(this.x, 0, width-scl);
-		this.y = constrain(this.y, 0, height-scl);
+			this.x = constrain(this.x, 0, width-scl);
+			this.y = constrain(this.y, 0, height-scl);
 
-		this.body[this.snakeLength-1] = createVector(this.x, this.y);
+			this.body[this.snakeLength-1] = createVector(this.x, this.y);
+		}
 	}
 	
 	//Redraws each of the rects on each of the vectors
 	this.show = function() {
 		fill(255);
 		//Draw each vector in body with a rectangle
-		for(var i = 0; i < this.snakeLength-1; i++) {
+		for(var i = 0; i < this.snakeLength; i++) {
 			rect(this.body[i].x, this.body[i].y, scl, scl);
 		}
-		fill(255);
-		rect(this.x, this.y, scl, scl);
 	}
 
-	//Game over when snake touches (eats) player (maybe use a divide and conquer for this? dont know if that'll apply)
+	//Game over when snake touches (eats) player
 	this.eat = function() {
 		for(var i = 0; i < this.snakeLength; i++) {
 			var snakeDistance = floor(dist(this.body[i].x, this.body[i].y, player.x, player.y)/scl);
 			if (snakeDistance < 1) {
 				//GAMEOVER
 				score = 0;
-				this.snakeLength = 1;
+				this.snakeLength = 0;
 				this.body = [];
 				this.body[0] = this.body[this.body.length - 1];
 				this.x = 0;
@@ -172,7 +171,6 @@ function PointBlock() {
 			this.y = 0;
 			this.pickLocation();
 			this.show();
-			print("sLength: " + snake.snakeLength);
 		}
 	}
 
