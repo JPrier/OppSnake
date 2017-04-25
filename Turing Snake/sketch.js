@@ -1,6 +1,7 @@
 
 var player;
 //var pointBlock;
+var bullet;
 var pointBlocks = [];
 var maxPoints = 2;
 var snake;
@@ -10,8 +11,7 @@ var canSize = 1000;
 var scl = canSize * .02;
 var startLength = 0;
 
-//TODO: ADD ML, get point blocks to spawn away from edges, and somehow make the pointblocks more efficient
-//going to put the point blocks into a BST so that collectpoint isnt getting called maxPoint times (which lags when it is a higher number)
+//TODO: add directional weights to snake, maybe give snake features when certain points are reached? (bullets)
 
 function setup() {
 	var cnv = createCanvas(canSize, canSize);
@@ -22,11 +22,14 @@ function setup() {
 	noCursor();
 
 	//framerate changes speed (flawed)
-	frameRate(30);
+	frameRate(20);
 
 	//Create new Snake
 	snake = new Snake();
 	snake.create();
+
+	//bullet = new Bullet();
+	//bullet.create(canSize/2,canSize/2,0);
 
 	//create new PointBlock (maybe make an array of these)
 	//pointBlock = new PointBlock();
@@ -54,6 +57,8 @@ function draw() {
 	snake.update();
 	snake.eat();
 	snake.show();
+
+	bullet.update();
 
 	//Create Player Vector and draw the player block
 	player = createVector(floor(mouseX), floor(mouseY));
@@ -198,6 +203,38 @@ function Snake() {
 				else if (snakeDistance > this.snakeLength) { break; }
 			}
 		}
+	}
+}
+
+function Bullet() {
+	this.x;
+	this.y;
+	this.vec;
+	//direction of the bullet
+	this.dir;
+	//travels 2 blocks a frame
+	this.speed = 2 * scl;
+
+	this.create = function(x, y, dir) {
+		this.x = x;
+		this.y = y;
+		this.dir = dir;
+		this.vec = createVector(this.x, this.y);
+	}
+
+	this.update = function() {
+		this.x += (speed * this.dir);
+		this.y += (speed * this.dir);
+		if (this.x < 0 || this.x > canSize || this.y < 0 || this.y > canSize) {
+			//Remove the bullet
+			this.vec = undefined; //?
+		}
+		else { this.show(); }
+	}
+
+	this.show = function() {
+			fill(25);
+			ellipse(this.x, this.y, scl/2);
 	}
 }
 
