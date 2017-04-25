@@ -1,8 +1,8 @@
 
 var player;
-var pointBlock;
+//var pointBlock;
 var pointBlocks = [];
-var maxPoints = 100;
+var maxPoints = 2;
 var snake;
 var speed = 1;
 var score = 0;
@@ -29,14 +29,17 @@ function setup() {
 	snake.create();
 
 	//create new PointBlock (maybe make an array of these)
-	pointBlock = new PointBlock();
-	pointBlock.pickLocation();
+	//pointBlock = new PointBlock();
+	//pointBlock.pickLocation();
 
 	//Array of PointBlocks
 	for(var i = 0; i < maxPoints; i++){
 		pointBlocks[i] = new PointBlock();
 		pointBlocks[i].pickLocation();
 	}
+
+	//pointBlockss = new PointBlockBST();
+	//pointBlockss.createTree();
 
 	//Create new Player vector
 	player = createVector(mouseX, mouseY);
@@ -60,14 +63,17 @@ function draw() {
 	rect(player.x, player.y, scl, scl)
 
 	//Update pointBlock
-	pointBlock.show();
-	pointBlock.collectPoint();
+	//pointBlock.show();
+	//pointBlock.collectPoint();
 
 	//Update pointBlocks
 	for(var i = 0; i < maxPoints; i++) {
 		pointBlocks[i].show();
 		pointBlocks[i].collectPoint();
 	}
+
+	//pointBlockss.collectPoint();
+	//pointBlockss.show(pointBlockss.root);
 }
 
 //Snake with the a block per point, follows the player's mouse
@@ -181,7 +187,10 @@ function Snake() {
 					this.yspeed = 0;
 					this.snakeLength = 0;
 					this.create();
-					pointBlock.pickLocation();
+					for (var i = 0; i < maxPoints; i++) {
+						pointBlocks[i].pickLocation();
+						pointBlocks[i].show();
+					}
 					textSize(40);
 					text("GAMEOVER", floor(canSize / 2), floor(canSize / 2));
 				}
@@ -197,8 +206,26 @@ function PointBlock() {
 	this.x = 0;
 	this.y = 0;
 	this.vec;
-	this.left;
-	this.right;
+	//this.left;
+	//this.right;
+	//this.parent;
+
+	//Gets a new random location for the point block
+	this.pickLocation = function() {
+		this.x = floor(random(floor(width/scl)));
+		this.y = floor(random(floor(height/scl)));
+
+		this.x = constrain(this.x, 0, width-scl);
+		this.y = constrain(this.y, 0, height-scl);
+	}
+
+	//Draws the point block
+	this.show = function() {
+		this.vec = createVector(this.x, this.y);
+		this.vec.mult(scl);
+		fill(200);
+		rect(this.vec.x, this.vec.y, scl, scl);
+	}
 
 	//Player collects point when it touches the block
 	this.collectPoint = function() {
@@ -230,26 +257,11 @@ function PointBlock() {
 			else { snake.update(); }		
 		}
 	}
-
-	//Gets a new random location for the point block
-	this.pickLocation = function() {
-		this.x = floor(random(floor(width/scl)));
-		this.y = floor(random(floor(height/scl)));
-
-		this.x = constrain(this.x, 0, width-scl);
-		this.y = constrain(this.y, 0, height-scl);
-	}
-
-	//Draws the point block
-	this.show = function() {
-		this.vec = createVector(this.x, this.y);
-		this.vec.mult(scl);
-		fill(200);
-		rect(this.vec.x, this.vec.y, scl, scl);
-	}
 }
 
-//PointBlock BST (attempted to be easy to change into AVL) -- need to add parent attribute
+
+//Pretty much a useless data structure (may attempt it again later but it really doesnt change the runtime by much)
+//PointBlock BST -- Still doesn't really work and overall barely changes runtime due to show() needing to be called maxPoint times no matter what
 function PointBlockBST() {
 
 	this.root;
@@ -264,38 +276,122 @@ function PointBlockBST() {
 			block = new PointBlock();
 			block.pickLocation();
 			this.insert(block);
+			block.show();
+		}
+	}
+
+	this.show = function(block) {
+
+		if (!block) {
+			return;
+		}
+		else {
+			this.show(block.left);
+			block.show();
+			this.show(block.right);
 		}
 	}
 
 	//Insert into the tree
 	this.insert = function(block) {
 
+		//Parent
+		var par;
+
 		//If the tree is empty set the root to 
 		if (!this.root) {
 			this.root = block;
-		}
-		var curr = this.root;
-		while (curr) {
-			if (curr.x >= block.x) {
-				curr = curr.left;
-			} else {
-				curr = curr.right;
-			}
-		}
-		curr = block;
-	}
+		} else {
+			var curr = this.root;
+			while (curr) {
+				par = curr;
 
-	//search through the tree for player.x !!!!!TODO!!!!!! -- need to add delete and adapt pointBlock.collectpoint to not find the distance
-		this.collectPoint = function() {
-		var curr = this.root;
-		var foundx = false;
-		while (curr) {
-			if (curr.x === player.x) {
-				if (curr.y === player.y) {
-					this.delete(curr);
-					curr.collectpoint();
+				if (curr.x >= block.x) {
+					curr = curr.left;
+				} else {
+					curr = curr.right;
 				}
 			}
+			curr = block;
+		}
+		block.parent = par;
+	}
+
+	//Returns the succesor of the given block (the left most node in the right subtree)
+	this.succesor = function(block) {
+		var curr = block.right;
+		while(curr.left) {
+			curr = curr.left;
+		}
+		
+		return curr;
+	}
+
+	this.replace = function(oldBlock, newBlock) {
+
+		if (!oldBlock.parent) {
+			this.root = newBlock;
+		}
+		else if (oldBlock === oldBlock.parent.left) {
+			oldBlock.parent.left = newBlock;
+		}
+		else { oldBlock.parent.right = newBlock; }
+
+		if (newBlock && newBlock.parent) {
+			newBlock.parent = oldBlock.parent;
+		}
+	}
+
+	//Delete the block from the tree (put its succesor into its place)
+	this.delete = function(block) {
+		//find block, then find it's succesor, then replace block with it's succesor?
+		if (!block.right) {
+
+			this.replace(block, block.left);
+
+		} else if (!block.left) {
+
+			this.replace(block, block.right);
+
+		} else {
+			var suc = this.succesor(block);
+
+			if (suc.parent != block) {
+				this.replace(suc, suc.right);
+				suc.right = block.right;
+				suc.right.parent = suc;
+			}
+
+			this.replace(block, suc);
+			suc.left = block.left;
+			suc.left.parent = suc;
+		}
+	}
+
+	//search through the tree for player.x
+	this.collectPoint = function() {
+	var curr = this.root;
+	var foundx = false;
+	while (curr) {
+		if (curr.x === floor(player.x/scl)) {
+			foundx = true;
+			if (curr.y === floor(player.y/scl)) {
+				var temp = curr;
+				this.delete(curr);
+				temp.parent = undefined;
+				temp.left = undefined;
+				temp.right = undefined;
+				temp.collectPoint();
+				this.insert(temp);
+				this.show(temp);
+				curr = undefined;
+			}
+		}
+		else if (curr.x <= player.x) {curr = curr.left; }
+		
+		else if (!foundx) { curr = curr.right; }
+		//if x is found then if player.x is more than curr.x then there is no point on the player
+		else { curr = undefined; }
 		}
 	}
 }
