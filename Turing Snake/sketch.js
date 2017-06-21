@@ -1,7 +1,7 @@
 
 var player;
 //var pointBlock;
-var bullet;
+//var bullet; Bullet seems too complex (but adds to the 'fun' of the game)
 var pointBlocks = [];
 var maxPoints = 2;
 var snake;
@@ -11,7 +11,7 @@ var canSize = 1000;
 var scl = canSize * .02;
 var startLength = 0;
 
-//TODO: add directional weights to snake, maybe give snake features when certain points are reached? (bullets)
+//TODO: add directional weights to snake, add data collection (location, direction (snake), and distance from player)
 
 function setup() {
 	var cnv = createCanvas(canSize, canSize);
@@ -206,6 +206,7 @@ function Snake() {
 	}
 }
 
+//not completed but is going to be left here for now
 function Bullet() {
 	this.x;
 	this.y;
