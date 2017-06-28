@@ -1,7 +1,6 @@
 
 var player;
 //var pointBlock;
-//var bullet; Bullet seems too complex (but adds to the 'fun' of the game)
 var pointBlocks = [];
 var maxPoints = 2;
 var snake;
@@ -10,11 +9,16 @@ var score = 0;
 var canSize = 1000;
 var scl = canSize * .02;
 var startLength = 0;
+var table = new p5.Table();
+//var newRow;
+var data = [];
+var id = 0;
 
 //TODO: add directional weights to snake, add data collection (location, direction (snake), and distance from player)
 
 function setup() {
-	var cnv = createCanvas(canSize, canSize);
+
+    var cnv = createCanvas(canSize, canSize);
 	var x = floor((windowWidth - width) / 2);
 	var y = floor((windowHeight - height) / 2);
 	cnv.position(x, y);
@@ -28,12 +32,9 @@ function setup() {
 	snake = new Snake();
 	snake.create();
 
-	//bullet = new Bullet();
-	//bullet.create(canSize/2,canSize/2,0);
-
-	//create new PointBlock (maybe make an array of these)
-	//pointBlock = new PointBlock();
-	//pointBlock.pickLocation();
+    /* create new PointBlock 
+	pointBlock = new PointBlock();
+	pointBlock.pickLocation();*/
 
 	//Array of PointBlocks
 	for(var i = 0; i < maxPoints; i++){
@@ -41,11 +42,12 @@ function setup() {
 		pointBlocks[i].pickLocation();
 	}
 
-	//pointBlockss = new PointBlockBST();
-	//pointBlockss.createTree();
 
 	//Create new Player vector
 	player = createVector(mouseX, mouseY);
+
+    var headers = ["id", "LocationX", 'LocationY', 'SpeedX', 'SpeedY'];//, 'Player Distance']
+    data[0] = headers;
 }
 
 function draw() {
@@ -58,7 +60,6 @@ function draw() {
 	snake.eat();
 	snake.show();
 
-	bullet.update();
 
 	//Create Player Vector and draw the player block
 	player = createVector(floor(mouseX), floor(mouseY));
@@ -76,9 +77,18 @@ function draw() {
 		pointBlocks[i].show();
 		pointBlocks[i].collectPoint();
 	}
+    
+    //set data points from this frame into an array and then add that array to the data array
+    id++;
+    if (snake.snakeLength > 0) { 
+        var frameData = [id, floor(snake.body[snake.snakeLength - 1].x), floor(snake.body[snake.snakeLength - 1].y), snake.xspeed, snake.yspeed];
+    } else { 
+        var frameData = [id, 0, 0, snake.xspeed, snake.yspeed];
+    }
+    
+    data[id] = frameData;
 
-	//pointBlockss.collectPoint();
-	//pointBlockss.show(pointBlockss.root);
+
 }
 
 //Snake with the a block per point, follows the player's mouse
@@ -89,6 +99,7 @@ function Snake() {
 	this.yspeed = 0;
 	this.snakeLength = 0;
 	this.body = [];
+    this.dir
 
 	//Creates snake, only called on start (useful if snake starts at lengths larger than 1) 
 	this.create = function() {
@@ -185,6 +196,12 @@ function Snake() {
 				var snakeDistance = floor(dist(this.body[i].x, this.body[i].y, player.x, player.y)/scl);
 				if (snakeDistance < 1) {
 					//GAMEOVER: reset all values and call create()
+
+
+                    //save the data table
+                    createTable();
+
+
 					score = 0;
 					this.x = 0;
 					this.y = 0;
@@ -203,39 +220,6 @@ function Snake() {
 				else if (snakeDistance > this.snakeLength) { break; }
 			}
 		}
-	}
-}
-
-//not completed but is going to be left here for now
-function Bullet() {
-	this.x;
-	this.y;
-	this.vec;
-	//direction of the bullet
-	this.dir;
-	//travels 2 blocks a frame
-	this.speed = 2 * scl;
-
-	this.create = function(x, y, dir) {
-		this.x = x;
-		this.y = y;
-		this.dir = dir;
-		this.vec = createVector(this.x, this.y);
-	}
-
-	this.update = function() {
-		this.x += (speed * this.dir);
-		this.y += (speed * this.dir);
-		if (this.x < 0 || this.x > canSize || this.y < 0 || this.y > canSize) {
-			//Remove the bullet
-			this.vec = undefined; //?
-		}
-		else { this.show(); }
-	}
-
-	this.show = function() {
-			fill(25);
-			ellipse(this.x, this.y, scl/2);
 	}
 }
 
@@ -433,3 +417,139 @@ function PointBlockBST() {
 		}
 	}
 }
+
+//Creates a table off of the data array
+function createTable() {
+
+    rows = data.length;
+    columns = data[0].length;
+    print("rows = " + rows + "   columns = " + columns);
+    
+    for (var i = 0; i < columns; i++) {
+        table.addColumn(data[0][i].replace(/(\r\n|\n|\r)/gm, ""));
+    }
+    print(table.getColumnCount());
+    // loop over each row and place each value into the new position (this may take awhile)
+    for (var r = 1; r < rows; r++) {
+        for (var c = 0; c < columns; c++) {
+            var row = table.addRow();
+            row.setNum(data[0][c], data[r][c]);
+            print(data[0][c] + " " + data[r][c] + "\n");
+        }
+    }
+
+    //Now that the table is created, save it
+    saveTable(table, 'Snake_Data.csv');
+
+
+
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* 
+
+                    STILL CONFUSED ON HOW TO GET THIS TO WORK
+                 ------------------------------------------------
+                 NOT USING THIS BUT LEAVING IT HERE FOR REFERENCE
+
+  Everything below this comment is for data to be documented in a .csv (a google spreadsheet)
+  Currently the data collected will be everything just for the sake of having it
+  With this data we can play around with how to train the snake to catch the player
+
+  Code based off: https://gist.github.com/mhawksey/1276293
+*/
+
+var SHEET_NAME = "https://docs.google.com/spreadsheets/d/1F5TQidnEWJC334g35LcLiDyFdhwlS0mDd-3diADLxZA/edit#gid=0"
+
+var SCRIPT_PROP = PropertiesService.getScriptProperties();
+
+function doGet(e) {
+    return handleResponse(e);
+}
+
+function doPost(e) {
+    return handleResponse(e);
+}
+
+function handleResponse(e) {
+    
+    // I think this avoids overwritting when there are multiple users sending data at the same time
+    var lock = LockService.getPublicLock();
+    lock.waitLock(30000); // wait 30 seconds before conceding defeat
+    
+    try {
+        
+        //Set where we will write the data        
+        var doc = SpreadsheetApp.openById(SCRIPT_PROP.getProperty("key"));
+        var sheet = doc.getSheetByName(SHEET_NAME);
+
+        var headRow = e.parameter.header_row || 1; // headers are in row 1
+        var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+        var nextRow = sheet.getLastRow()+1; // get next row
+        var row = [];
+        
+        //loop through the header columns
+        for (i in headers) {
+            if (headers[i] == "Timestamp"){
+                row.push(new Date());
+            } else {
+                row.push(e.parameter[headers[i]]);
+            }
+        }
+        
+
+        sheet.getRange(nextRow, 1, 1, row.length).setValues([row]);
+        
+        return ContentService
+                .createTextOutput(JSON.stringify({"result":"success", "row": nextRow}))
+                .setMimeType(ContentService.MimeType.JSON);
+        } catch (e) {
+            return ContentService
+                .createTextOutput(JSON.stringify({"result":"error", "error": e}))
+                .setMimeType(ContentService.MimeType.JSON);
+        } finally { //release lock
+            lock.releaseLock();
+        }
+}
+
+
+
+//Spreadsheet setup
+function docSetup() {
+        var doc = SpreadsheetApp.getActiveSpreadsheet();
+        SCRIPT_PROP.setProperty("key", doc.getId());
+}
+
+
