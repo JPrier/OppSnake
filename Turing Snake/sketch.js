@@ -80,10 +80,11 @@ function draw() {
     
     //set data points from this frame into an array and then add that array to the data array
     id++;
+
     if (snake.snakeLength > 0) { 
-        var frameData = [id, floor(snake.body[snake.snakeLength - 1].x), floor(snake.body[snake.snakeLength - 1].y), snake.xspeed, snake.yspeed];
+        frameData = [id, floor(snake.body[snake.snakeLength - 1].x), floor(snake.body[snake.snakeLength - 1].y), snake.xspeed, snake.yspeed];
     } else { 
-        var frameData = [id, 0, 0, snake.xspeed, snake.yspeed];
+        frameData = [id, 0, 0, snake.xspeed, snake.yspeed];
     }
     
     data[id] = frameData;
@@ -421,7 +422,10 @@ function PointBlockBST() {
 //Creates a table off of the data array
 function createTable() {
 
-    rows = data.length;
+
+	//----- The p5.table does not work ------
+	
+   /* rows = data.length;
     columns = data[0].length;
     print("rows = " + rows + "   columns = " + columns);
     
@@ -440,8 +444,24 @@ function createTable() {
 
     //Now that the table is created, save it
     saveTable(table, 'Snake_Data.csv');
+*/
 
 
+    //Attempting in native JS
+    var csvContent = "data:text/csv;charset=utf-8,";
+    data.forEach(function(infoArray, index){
+
+    	dataString = infoArray.join(",");
+    	csvContent += dataString + "\n";
+    });
+
+    var encodedUri = encodeURI(csvContent);
+    var link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "Snake_Data_Native.csv");
+    document.body.appendChild(link);
+
+    link.click();
 
 
 }
