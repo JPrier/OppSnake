@@ -48,6 +48,22 @@ function setup() {
 
     var headers = ["id", "LocationX", 'LocationY', 'SpeedX', 'SpeedY'];//, 'Player Distance']
     data[0] = headers;
+
+
+    // After thinking of this...if it creates an array of arrays for the file for every game its going to use so much more power than necessary
+    //---------------------------------------------------------------
+    // //getting file, reading from it and then adding it to data[]
+   	// var file = document.getElementById("FileUpload").files[0];
+   	// if (file) {
+   	// 	var reader =  new FileReader();
+   	// 	reader.readAsText(file, "utf-8");
+   	// 	reader.onload = function (evt) {
+   	// 		document.getElementById("fileContents").innerHTML = evt.target.result;
+   	// 	}
+   	// 	reader.onerror = function (evt) {
+   	// 		document.getElementById("fileContents").innerHTML = "error reading file";
+   	// 	}
+   	// }
 }
 
 function draw() {
@@ -423,30 +439,6 @@ function PointBlockBST() {
 function createTable() {
 
 
-	//----- The p5.table does not work ------
-	
-   /* rows = data.length;
-    columns = data[0].length;
-    print("rows = " + rows + "   columns = " + columns);
-    
-    for (var i = 0; i < columns; i++) {
-        table.addColumn(data[0][i].replace(/(\r\n|\n|\r)/gm, ""));
-    }
-    print(table.getColumnCount());
-    // loop over each row and place each value into the new position (this may take awhile)
-    for (var r = 1; r < rows; r++) {
-        for (var c = 0; c < columns; c++) {
-            var row = table.addRow();
-            row.setNum(data[0][c], data[r][c]);
-            print(data[0][c] + " " + data[r][c] + "\n");
-        }
-    }
-
-    //Now that the table is created, save it
-    saveTable(table, 'Snake_Data.csv');
-*/
-
-
     //Attempting in native JS
     var csvContent = "data:text/csv;charset=utf-8,";
     data.forEach(function(infoArray, index){
@@ -465,111 +457,3 @@ function createTable() {
 
 
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/* 
-
-                    STILL CONFUSED ON HOW TO GET THIS TO WORK
-                 ------------------------------------------------
-                 NOT USING THIS BUT LEAVING IT HERE FOR REFERENCE
-
-  Everything below this comment is for data to be documented in a .csv (a google spreadsheet)
-  Currently the data collected will be everything just for the sake of having it
-  With this data we can play around with how to train the snake to catch the player
-
-  Code based off: https://gist.github.com/mhawksey/1276293
-*/
-
-var SHEET_NAME = "https://docs.google.com/spreadsheets/d/1F5TQidnEWJC334g35LcLiDyFdhwlS0mDd-3diADLxZA/edit#gid=0"
-
-var SCRIPT_PROP = PropertiesService.getScriptProperties();
-
-function doGet(e) {
-    return handleResponse(e);
-}
-
-function doPost(e) {
-    return handleResponse(e);
-}
-
-function handleResponse(e) {
-    
-    // I think this avoids overwritting when there are multiple users sending data at the same time
-    var lock = LockService.getPublicLock();
-    lock.waitLock(30000); // wait 30 seconds before conceding defeat
-    
-    try {
-        
-        //Set where we will write the data        
-        var doc = SpreadsheetApp.openById(SCRIPT_PROP.getProperty("key"));
-        var sheet = doc.getSheetByName(SHEET_NAME);
-
-        var headRow = e.parameter.header_row || 1; // headers are in row 1
-        var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-        var nextRow = sheet.getLastRow()+1; // get next row
-        var row = [];
-        
-        //loop through the header columns
-        for (i in headers) {
-            if (headers[i] == "Timestamp"){
-                row.push(new Date());
-            } else {
-                row.push(e.parameter[headers[i]]);
-            }
-        }
-        
-
-        sheet.getRange(nextRow, 1, 1, row.length).setValues([row]);
-        
-        return ContentService
-                .createTextOutput(JSON.stringify({"result":"success", "row": nextRow}))
-                .setMimeType(ContentService.MimeType.JSON);
-        } catch (e) {
-            return ContentService
-                .createTextOutput(JSON.stringify({"result":"error", "error": e}))
-                .setMimeType(ContentService.MimeType.JSON);
-        } finally { //release lock
-            lock.releaseLock();
-        }
-}
-
-
-
-//Spreadsheet setup
-function docSetup() {
-        var doc = SpreadsheetApp.getActiveSpreadsheet();
-        SCRIPT_PROP.setProperty("key", doc.getId());
-}
-
-
