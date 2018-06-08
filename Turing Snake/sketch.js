@@ -13,6 +13,7 @@ var table = new p5.Table();
 //var newRow;
 var data = [];
 var id = 0;
+var snakeCount;
 
 //TODO: add directional weights to snake, add data collection (location, direction (snake), and distance from player)
 
@@ -26,11 +27,13 @@ function setup() {
 	noCursor();
 
 	//framerate changes speed (flawed)
-	frameRate(20);
+	frameRate(120);
 
 	//Create new Snake
 	snake = new Snake();
 	snake.create();
+
+	snakeCount = 0;
 
     /* create new PointBlock 
 	pointBlock = new PointBlock();
@@ -51,6 +54,7 @@ function setup() {
 
 
     // After thinking of this...if it creates an array of arrays for the file for every game its going to use so much more power than necessary
+    // (This also needs to be in draw -- I dont think itll do anything in setup())
     //---------------------------------------------------------------
     // //getting file, reading from it and then adding it to data[]
    	// var file = document.getElementById("FileUpload").files[0];
@@ -72,16 +76,13 @@ function draw() {
 	//Update snake
 	textSize(40);
 	text("Points: " + score, floor((windowWidth - width) / 2), floor((windowHeight - height) / 2));
-	snake.update();
-	snake.eat();
-	snake.show();
-
-
+	
 	//Create Player Vector and draw the player block
 	player = createVector(floor(mouseX), floor(mouseY));
 	fill(255);
 	player.x = constrain(player.x, 0, width-scl);
 	player.y = constrain(player.y, 0, height-scl);
+	//console.log("x: " + player.x + " y: " + player.y);
 	rect(player.x, player.y, scl, scl)
 
 	//Update pointBlock
@@ -94,6 +95,14 @@ function draw() {
 		pointBlocks[i].collectPoint();
 	}
     
+    if(snakeCount == 6) {
+		snake.update();
+		snakeCount = 0;
+	}
+	snake.show();
+	snake.eat();
+	snakeCount++;
+
     //set data points from this frame into an array and then add that array to the data array
     id++;
 
@@ -116,7 +125,9 @@ function Snake() {
 	this.yspeed = 0;
 	this.snakeLength = 0;
 	this.body = [];
-    this.dir
+    this.dirY = 0;
+    this.dirX = 0;
+    this.currentScore = 0;
 
 	//Creates snake, only called on start (useful if snake starts at lengths larger than 1) 
 	this.create = function() {
@@ -140,11 +151,11 @@ function Snake() {
 	//Updates directional values
 	this.dir = function() {
 
-		distX = floor(((mouseX - this.x) / scl) / speed);
-		distY = floor(((mouseY - this.y) / scl) / speed);
+		//distX = floor(((mouseX - this.x) / scl) / speed);
+		//distY = floor(((mouseY - this.y) / scl) / speed);
 
 
-		//Change X direction towards mouse location
+		/*Change X direction towards mouse location
 		if (distX < 0) {
 			this.xspeed = -speed;
 		} else if (distX > 0) { 
@@ -159,12 +170,16 @@ function Snake() {
 			this.yspeed = speed;
 		} else {
 			this.yspeed = 0;
-		}
+		}*/
+
+		this.xspeed = this.dirX * speed;
+		this.yspeed = this.dirY * speed;
 	}
 
 	//Updates locations for all vectors in the snake
 	this.update = function() {
 		//update directions
+		this.decideNext();
 		this.dir();
 
 		//change location of vectors
@@ -186,8 +201,8 @@ function Snake() {
 		}
 
 
-		if (this.snakeLength < this.body.length) {
-			print("ERROR: snakeLength is smaller than body.length -- " + this.snakeLength + " " + this.body.length);
+		if (this.snakeLength != this.body.length) {
+			print("ERROR: snakeLength is different than body.length -- " + this.snakeLength + " " + this.body.length);
 		}
 	}
 	
@@ -216,7 +231,7 @@ function Snake() {
 
 
                     //save the data table
-                    createTable();
+                    //createTable();
 
 
 					score = 0;
@@ -237,6 +252,121 @@ function Snake() {
 				else if (snakeDistance > this.snakeLength) { break; }
 			}
 		}
+	}
+	/*Use a heuristic to score move
+		PUNISH FOR:
+			- Crossing over itself
+		REWARD FOR:
+		    - Better trapping of opponent (idk how to do this)
+		    - Decreasing distance of opponent
+	*/
+	this.moveScore = function() {
+		function cross(snake) {
+			for(var i = 1; i < snake.body.length; i++){
+				if ((snake.body[i].x === snake.body[0].x + snake.xspeed) && (snake.body[i].y === snake.body[0].y + snake.yspeed)){
+					return -1;
+				}
+			}
+			return 0;
+		}
+
+		function distPlayer(snake) {
+			xsnake = snake.x + (snake.dirX * speed);
+			ysnake = snake.y + (snake.dirY * speed);
+			xsnake = constrain(xsnake, 0, width-scl);
+			ysnake = constrain(ysnake, 0, height-scl);
+			
+			distX = floor(((player.x - xsnake) / scl) / speed);
+			distY = floor(((player.y - ysnake) / scl) / speed);
+			//console.log("distX: " + distX + ", " + mouseX + ", " + snake.x);
+			//console.log("distY: " + distY);
+			return (distX + distY);
+		}
+		dists = distPlayer(this);
+		return dists + 200*(cross(this));
+	}
+
+	//Decides the best move off of what direction scores the best
+	this.decideNext = function() {
+		//console.log(1);
+		curDir = [this.dirX, this.dirY];
+		curScore = this.moveScore();
+
+		maxScore = -Infinity;
+		bestDir = [];
+		dirs = this.getDirs();
+		//dirs = [[0, 1], [1, 1], [1, 0], [0, -1], [-1, -1], [-1, 0]];
+		for (var i = 0; i < dirs.length; i++) {
+			this.dirX = dirs[i][0];
+			this.dirY = dirs[i][1];
+			tempScore = this.moveScore();
+			if (tempScore > maxScore) {
+				maxScore = tempScore;
+				bestDir = dirs[i];
+			}
+			//console.log("dir: " + dirs[i] + " -> " + tempScore);
+		}
+		if (curScore > maxScore) {
+			bestDir = curDir;
+		}
+		this.dirX = bestDir[0];
+		this.dirY = bestDir[1];
+
+		console.log("Score: " + maxScore);
+		console.log("curScore: " + curScore);
+		console.log(bestDir);
+	}
+
+	this.getDirs = function() {
+		
+		dirs = [];
+
+		if (this.y != 980) {
+			append(dirs, [0, 1]);
+
+			if (this.x != 0) {
+				append(dirs, [-1, 1]);
+			}
+			if (this.x != 980) {
+				append(dirs, [1, 1]);
+			}
+		}
+
+		if (this.y != 0) {
+			append(dirs, [0, -1]);
+
+			if (this.x != 0) {
+				append(dirs, [-1, -1]);
+			}
+			if (this.x != 980) {
+				append(dirs, [1, -1]);
+			}
+		}
+
+		if (this.x != 0) {
+			append(dirs, [-1, 0]);
+		}
+		if (this.x != 980) {
+			append(dirs, [1, 0]);
+		}
+		/*
+		if (this.body[0] != null) {
+			for (var i = 0; i < dirs.length; i++) {
+				headtemp = this.body[0];
+				//console.log(headtemp);
+				headtemp.x += dirs[i][0] * this.xspeed;
+				headtemp.y += dirs[i][1] * this.yspeed;
+
+				for (var j = 1; j < this.body.length; j++) {
+					//console.log(headtemp + "   " + this.body[j]);
+					if (headtemp.x === this.body[j].x || headtemp.y === this.body[j].y) {
+						//console.log("hello");
+						splice(dirs, i);
+					}
+				}
+			}
+		}*/
+		return dirs;
 	}
 }
 
@@ -270,10 +400,10 @@ function PointBlock() {
 	this.collectPoint = function() {
 
 		//get distance
-		var d = floor(dist(this.vec.x, this.vec.y, player.x, player.y)/scl);
+		var d = dist(this.vec.x, this.vec.y, player.x, player.y)/scl;
 
 		//If distance is less than 1 then collect the point and change the variables
-		if (d < 1){
+		if (d < 1.05){
 			
 			//increments score and snakelength (can probably just use score to set snakeLength)
 			score++;
