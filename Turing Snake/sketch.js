@@ -35,7 +35,7 @@ function setup() {
 
 	snakeCount = 0;
 
-    /* create new PointBlock 
+    /* create new PointBlock
 	pointBlock = new PointBlock();
 	pointBlock.pickLocation();*/
 
@@ -76,7 +76,7 @@ function draw() {
 	//Update snake
 	textSize(40);
 	text("Points: " + score, floor((windowWidth - width) / 2), floor((windowHeight - height) / 2));
-	
+
 	//Create Player Vector and draw the player block
 	player = createVector(floor(mouseX), floor(mouseY));
 	fill(255);
@@ -94,7 +94,7 @@ function draw() {
 		pointBlocks[i].show();
 		pointBlocks[i].collectPoint();
 	}
-    
+
     if(snakeCount == 6) {
 		snake.update();
 		snakeCount = 0;
@@ -106,12 +106,12 @@ function draw() {
     //set data points from this frame into an array and then add that array to the data array
     id++;
 
-    if (snake.snakeLength > 0) { 
+    if (snake.snakeLength > 0) {
         frameData = [id, floor(snake.body[snake.snakeLength - 1].x), floor(snake.body[snake.snakeLength - 1].y), snake.xspeed, snake.yspeed];
-    } else { 
+    } else {
         frameData = [id, 0, 0, snake.xspeed, snake.yspeed];
     }
-    
+
     data[id] = frameData;
 
 
@@ -129,7 +129,7 @@ function Snake() {
     this.dirX = 0;
     this.currentScore = 0;
 
-	//Creates snake, only called on start (useful if snake starts at lengths larger than 1) 
+	//Creates snake, only called on start (useful if snake starts at lengths larger than 1)
 	this.create = function() {
 
 		//empties the body list to make sure nothing is left when the game restarts
@@ -158,7 +158,7 @@ function Snake() {
 		/*Change X direction towards mouse location
 		if (distX < 0) {
 			this.xspeed = -speed;
-		} else if (distX > 0) { 
+		} else if (distX > 0) {
 			this.xspeed = speed;
 		} else {
 			this.xspeed = 0;
@@ -205,7 +205,7 @@ function Snake() {
 			print("ERROR: snakeLength is different than body.length -- " + this.snakeLength + " " + this.body.length);
 		}
 	}
-	
+
 	//Redraws each of the rects on each of the vectors
 	this.show = function() {
 		fill(255);
@@ -261,9 +261,10 @@ function Snake() {
 		    - Decreasing distance of opponent
 	*/
 	this.moveScore = function() {
+    this.dir();
 		function cross(snake) {
 			for(var i = 1; i < snake.body.length; i++){
-				if ((snake.body[i].x === snake.body[0].x + snake.xspeed) && (snake.body[i].y === snake.body[0].y + snake.yspeed)){
+				if ((snake.body[i].x  === snake.body[0].x + snake.xspeed) && (snake.body[i].y + snake.yspeed === snake.body[0].y + snake.yspeed)){
 					return -1;
 				}
 			}
@@ -275,15 +276,57 @@ function Snake() {
 			ysnake = snake.y + (snake.dirY * speed);
 			xsnake = constrain(xsnake, 0, width-scl);
 			ysnake = constrain(ysnake, 0, height-scl);
-			
-			distX = floor(((player.x - xsnake) / scl) / speed);
-			distY = floor(((player.y - ysnake) / scl) / speed);
+
+			distX = floor((abs(player.x - xsnake)));
+			distY = floor((abs(player.y - ysnake)));
 			//console.log("distX: " + distX + ", " + mouseX + ", " + snake.x);
 			//console.log("distY: " + distY);
 			return (distX + distY);
 		}
-		dists = distPlayer(this);
-		return dists + 200*(cross(this));
+
+    //TODO: find the min distance blockand add the distance of that
+    /*
+    This is a bit more complex that it seems at first.
+    By adding up all the distances the snake can get stuck between 2 blocks.
+    By using the minimum you limit the amount of possible strategies for the snake.
+
+    So I think each block should be treated individually and given its own parameter
+    I also think in order to add more than 1 block I will need to add in an ML algo
+    */
+    function distBlock(snake) {
+      xsnake = snake.x + (snake.dirX * speed);
+			ysnake = snake.y + (snake.dirY * speed);
+			xsnake = constrain(xsnake, 0, width-scl);
+			ysnake = constrain(ysnake, 0, height-scl);
+
+      distX = 0;
+      distY = 0;
+      /*
+      for (var i = 0; i < pointBlocks.length; i++) {
+          distX += abs(pointBlocks[i].x - xsnake);
+          distY += abs(pointBlocks[i].y - ysnake);
+      }*/
+      distX += abs(pointBlocks[0].x - xsnake);
+      distY += abs(pointBlocks[0].y - ysnake);
+
+      return (distX + distY);
+    }
+
+    //TODO: add in a punishment for allowing the player to score
+    /*
+    I am not exactly sure how to go about this but it needs to be a simple parameter.
+
+    POSSIBLE SOLUTIONS:
+      - see if the snake is between the player and a point block
+      - just add in player score (doesnt help predict next game states)
+    */
+
+		playerDist = -distPlayer(this);
+    blockDists = -distBlock(this);
+    console.log("block Distance: " + blockDists);
+    dists = 2*playerDist;
+    dists += blockDists ? blockDists : 0;
+		return dists + 2000*(cross(this));
 	}
 
 	//Decides the best move off of what direction scores the best
@@ -314,39 +357,40 @@ function Snake() {
 
 		console.log("Score: " + maxScore);
 		console.log("curScore: " + curScore);
-		console.log(bestDir);
+		console.log(bestDir + " x: " + this.x + ", y: " + this.y);
 	}
 
 	this.getDirs = function() {
-		
-		dirs = [];
 
-		if (this.y != 980) {
+		dirs = [];
+    yLimit = canSize - 20;
+
+		if (this.y < yLimit) {
 			append(dirs, [0, 1]);
 
-			if (this.x != 0) {
+			if (this.x >= 0) {
 				append(dirs, [-1, 1]);
 			}
-			if (this.x != 980) {
+			if (this.x < yLimit) {
 				append(dirs, [1, 1]);
 			}
 		}
 
-		if (this.y != 0) {
+		if (this.y >= 0) {
 			append(dirs, [0, -1]);
 
-			if (this.x != 0) {
+			if (this.x >= 0) {
 				append(dirs, [-1, -1]);
 			}
-			if (this.x != 980) {
+			if (this.x < yLimit) {
 				append(dirs, [1, -1]);
 			}
 		}
 
-		if (this.x != 0) {
+		if (this.x >= 0) {
 			append(dirs, [-1, 0]);
 		}
-		if (this.x != 980) {
+		if (this.x < yLimit) {
 			append(dirs, [1, 0]);
 		}
 		/*
@@ -404,7 +448,7 @@ function PointBlock() {
 
 		//If distance is less than 1 then collect the point and change the variables
 		if (d < 1.05){
-			
+
 			//increments score and snakelength (can probably just use score to set snakeLength)
 			score++;
 			snake.snakeLength++;
@@ -421,9 +465,9 @@ function PointBlock() {
 			if (score == 1) {
 				snake.snakeLength += startLength;
 				snake.create();
-			} 
+			}
 			//if the score is higher than 1 call update for each collected point to make sure the snakeLength is not larger than body.length
-			else { snake.update(); }		
+			else { snake.update(); }
 		}
 	}
 }
@@ -467,7 +511,7 @@ function PointBlockBST() {
 		//Parent
 		var par;
 
-		//If the tree is empty set the root to 
+		//If the tree is empty set the root to
 		if (!this.root) {
 			this.root = block;
 		} else {
@@ -492,7 +536,7 @@ function PointBlockBST() {
 		while(curr.left) {
 			curr = curr.left;
 		}
-		
+
 		return curr;
 	}
 
@@ -557,7 +601,7 @@ function PointBlockBST() {
 			}
 		}
 		else if (curr.x <= player.x) {curr = curr.left; }
-		
+
 		else if (!foundx) { curr = curr.right; }
 		//if x is found then if player.x is more than curr.x then there is no point on the player
 		else { curr = undefined; }
